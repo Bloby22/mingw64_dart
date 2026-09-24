@@ -14,15 +14,15 @@ namespace API {
         using std::runtime_error::runtime_error;
     };
 
-    // Build 
+    // Build object URL
     std::string ObjectUrl(const std::string& bucket, const std::string& object);
 
-    // Download new object (e.g. JSON) to memory
+    // Fetch text from URL
     std::string GetText(const std::string& url);
 
     using Progress = std::function<void(std::uint64_t done, std::uint64_t total)>;
 
-    // Download to dest (for dest + ".part" for done renaming)
+    // Download file to destination
     void Download(const std::string& url, const std::filesystem::path& dest,
                 Progress progress = nullptr);
 }
