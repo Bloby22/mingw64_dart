@@ -3,8 +3,8 @@
 # resulting package layout, without needing makepkg or a pacman environment.
 #
 # Usage:
-#   perl scripts/makepkg-check.pl           # build into build-pkg/ and verify
-#   perl scripts/makepkg-check.pl --no-build  # verify existing build-pkg/ only
+#   perl scripts/makepkg.pl           # build into build-pkg/ and verify
+#   perl scripts/makepkg.pl --no-build  # verify existing build-pkg/ only
 use strict;
 use warnings;
 
@@ -42,7 +42,7 @@ my ($pkgrel) = $pkg =~ /^\s*pkgrel\s*=\s*(\d+)\s*$/m
 print "Package: $pkgname $pkgver-$pkgrel\n";
 
 # Sources listed in PKGBUILD build() must exist and compile.
-my @sources = $pkg =~ /^\s+"?\$startdir\/(src\/[\w\/.]+\.cpp)"?\s*\\?$/mg;
+my @sources = $pkg =~ /^\s+"?(?:\$startdir\/)?(src\/[\w\/.]+\.cpp)"?\s*\\?$/mg;
 die "No source files found in $pkgbuild\n" unless @sources;
 for my $src (@sources) {
     my $path = File::Spec->catfile($root, split m{/}, $src);
@@ -83,7 +83,7 @@ printf "Result: OK\n  %s (%d bytes)\n  LICENSE (present)\n",
 
 # Smoke test: binary must at least respond to --help.
 my $help_out = `$exe --help 2>&1`;
-if ($? == 0 && $help_out =~ /Usage|Pouziti/) {
+if ($? == 0 && $help_out =~ /Usage/) {
     print "Smoke test (--help): OK\n";
 } else {
     print "Smoke test (--help): WARNING - output or exit code is unexpected\n";
