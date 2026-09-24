@@ -1,11 +1,11 @@
 #!/usr/bin/env perl
 # Bump pkgver/pkgrel in PKGBUILD and sync the version into any CMake project() call.
 # Usage:
-#   scripts/bump-version.pl 0.2.0            # set version + reset pkgrel to 1
-#   scripts/bump-version.pl --major          # 0.1.0 -> 1.0.0
-#   scripts/bump-version.pl --minor          # 0.1.0 -> 0.2.0
-#   scripts/bump-version.pl --patch          # 0.1.0 -> 0.1.1
-#   scripts/bump-version.pl --bump-pkgrel    # keep version, pkgrel + 1
+#   scripts/bump.pl 0.2.0            # set version + reset pkgrel to 1
+#   scripts/bump.pl --major          # 0.1.0 -> 1.0.0
+#   scripts/bump.pl --minor          # 0.1.0 -> 0.2.0
+#   scripts/bump.pl --patch          # 0.1.0 -> 0.1.1
+#   scripts/bump.pl --bump-pkgrel    # keep version, pkgrel + 1
 use strict;
 use warnings;
 
