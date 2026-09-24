@@ -8,6 +8,7 @@
 namespace API {
     inline constexpr const char* kHost = "https://storage.googleapis.com";
     inline constexpr const char* kFlutterBucket = "flutter_infra_release";
+    inline constexpr const char* kDartHost = "https://storage.googleapis.com/dart-archive";
 
     class Error : public std::runtime_error {
         public:
