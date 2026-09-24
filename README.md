@@ -1,200 +1,91 @@
 # mingw64-dart
 
-> A native Flutter and Dart release CLI for MSYS2 MinGW64
+> A native Dart SDK and Flutter release CLI for MSYS2 MinGW64.
 
-`flutter` downloads Flutter release metadata and Dart SDK archives directly
-from Google Cloud Storage. It is written in C++20, built with MinGW-w64, and
-distributed as an MSYS2 package.
-
-## Highlights
-
-- Query Flutter releases by platform, channel, and result limit
-- Read the latest Dart SDK version for stable, beta, or dev
-- Download and verify Dart SDK archives with SHA-256
-- Extract the SDK and print the correct MSYS2 PATH command
-- Calculate SHA-256 checksums for local files
-- Install as `flutter`, with `flutter-cli` and `release_client` compatibility names
+`flutter` downloads release metadata and Dart SDK archives from Google Cloud
+Storage. Downloads are verified with SHA-256 before optional extraction.
 
 ## Requirements
 
-- MSYS2 MinGW64 environment
+- [MSYS2](https://www.msys2.org/) with a MinGW64 terminal
 - GCC with C++20 support
-- CMake 3.20 or newer
 - `mingw-w64-x86_64-curl`
-- Perl for the maintenance scripts
+- CMake 3.20+ and `make`
 
-Install the native dependencies from a MinGW64 terminal:
+Install the dependencies:
 
 ```sh
 pacman -S --needed mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake \
-  mingw-w64-x86_64-curl make perl
+  mingw-w64-x86_64-curl make
 ```
 
-## Install From Package
-
-Build and install the local package from an MSYS2 MinGW64 terminal:
+## Build
 
 ```sh
-cd /d/Dev/mingw64_dart
-export PATH=/mingw64/bin:/usr/bin:$PATH
-makepkg -f
-pacman -U mingw64-dart-0.1.3-3-x86_64.pkg.tar.zst
-```
-
-The package installs these commands into `/mingw64/bin`:
-
-```text
-flutter.exe
-flutter-cli.exe
-release_client.exe
-```
-
-Verify the installation:
-
-```sh
-flutter --version
-flutter --help
-```
-
-## Build From Source
-
-Use the Makefile wrapper:
-
-```sh
+git clone https://github.com/BlobyCZ/mingw64_dart.git
+cd mingw64_dart
 make build
 ```
 
-Or configure CMake directly:
+The executable is created in `build/release_client.exe`.
+
+To build and install an MSYS2 package instead:
 
 ```sh
-cmake -S . -B build -G "MinGW Makefiles"
-cmake --build build --config Release
+makepkg -f
+pacman -U mingw-w64-x86_64-mingw64-dart-*.pkg.tar.zst
 ```
 
-Available Make targets:
+The package provides `flutter`, `flutter-cli`, and `release_client`.
 
-| Target | Description |
-| --- | --- |
-| `make build` | Configure and build with CMake |
-| `make test` | Run CTest |
-| `make rebuild` | Clean and build again |
-| `make clean` | Remove the CMake build directory |
-| `make help` | Show available targets |
+## Usage
 
-## CLI Reference
-
-```text
-flutter releases [--platform <platform>] [--channel <channel>] [--limit <n>]
-    List Flutter releases from releases_<platform>.json.
-
-flutter dart-latest [--channel <channel>]
-    Print the newest Dart SDK version for a channel.
-
-flutter dartsdk [--dest <dir>] [--channel <channel>]
-    Download, verify, and extract the latest Windows x64 Dart SDK.
-
-flutter sdk <version> [--dest <dir>] [--channel <channel>]
-             [--os <os>] [--arch <arch>] [--extract|--no-extract]
-    Download a specific SDK archive. The version may be "latest".
-
-flutter sha256 <file>
-    Calculate the SHA-256 checksum of a local file.
-```
-
-## Examples
-
-List the latest stable Flutter releases:
+Download and extract the latest stable Dart SDK for Windows x64:
 
 ```sh
-flutter releases
+flutter dartsdk --dest ./sdk
 ```
 
-List five beta releases for Linux:
+Add the extracted SDK to the current MSYS2 session:
 
 ```sh
-flutter releases --platform linux --channel beta --limit 5
-```
-
-Download and extract the latest Dart SDK into a directory with spaces:
-
-```sh
-flutter dartsdk --dest "/d/Program Lang/dart"
-```
-
-Run the PATH command printed by the tool, for example:
-
-```sh
-export PATH="/d/Program Lang/dart/dart-sdk/bin:$PATH"
+export PATH="$PWD/sdk/dart-sdk/bin:$PATH"
 dart --version
 ```
 
-Persist the PATH for future MSYS2 sessions:
+Get the newest SDK version for a channel:
 
 ```sh
-echo 'export PATH="/d/Program Lang/dart/dart-sdk/bin:$PATH"' >> ~/.bashrc
-source ~/.bashrc
+flutter dart-latest --channel stable
 ```
 
-Download a specific SDK archive without extraction:
+Download a specific SDK without extracting it:
 
 ```sh
 flutter sdk 3.9.4 --dest ./sdk --no-extract
 ```
 
-Download and extract a specific SDK archive:
+List Flutter releases:
 
 ```sh
-flutter sdk latest --dest ./sdk --extract
+flutter releases --platform windows --channel stable --limit 10
 ```
 
-## Packaging and Maintenance
-
-Build the package with `makepkg`:
+Calculate a local file's SHA-256 checksum:
 
 ```sh
-makepkg -f
+flutter sha256 path/to/file.zip
 ```
 
-Use `makepkg -f`, not `makepkg -C`, in this repository. The project source
-directory is named `src/`, and aggressive clean mode can treat it as a package
-staging directory.
+Run `flutter --help` for the complete command reference. Supported channels are
+`stable`, `beta`, and `dev`.
 
-Validate the PKGBUILD build inputs and package layout:
+## Development
 
 ```sh
-perl scripts/makepkg.pl
-perl scripts/makepkg.pl --no-build
-```
-
-Bump the package version:
-
-```sh
-perl scripts/bump.pl --patch
-perl scripts/bump.pl --minor
-perl scripts/bump.pl --major
-perl scripts/bump.pl --bump-pkgrel
-```
-
-The version script updates `pkgver` and `pkgrel` in `PKGBUILD` and synchronizes
-the CMake project version when one is present.
-
-## Exit Codes
-
-| Code | Meaning |
-| --- | --- |
-| `0` | Command completed successfully |
-| `1` | Runtime failure, network error, or checksum mismatch |
-| `2` | Invalid command or missing argument |
-
-## Project Layout
-
-```text
-include/       Public C++ headers
-src/           C++ implementation
-scripts/       Perl packaging and version tools
-PKGBUILD       MSYS2 package definition
-CMakeLists.txt CMake build definition
-Makefile       Build convenience targets
+make test       # Run CTest
+make rebuild    # Clean and build again
+make clean      # Remove the build directory
 ```
 
 ## License
