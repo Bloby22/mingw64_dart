@@ -1,26 +1,20 @@
 #!/usr/bin/env perl
-# Packaging sanity check: rebuild the PKGBUILD g++ command and verify the
-# resulting package layout, without needing makepkg or a pacman environment.
-#
+# Bump pkgver/pkgrel in PKGBUILD and sync the version into any CMake project() call.
 # Usage:
-#   perl scripts/makepkg-check.pl           # build into build-pkg/ and verify
-#   perl scripts/makepkg-check.pl --no-build  # verify existing build-pkg/ only
+#   scripts/bump-version.pl 0.2.0            # set version + reset pkgrel to 1
+#   scripts/bump-version.pl --major          # 0.1.0 -> 1.0.0
+#   scripts/bump-version.pl --minor          # 0.1.0 -> 0.2.0
+#   scripts/bump-version.pl --patch          # 0.1.0 -> 0.1.1
+#   scripts/bump-version.pl --bump-pkgrel    # keep version, pkgrel + 1
 use strict;
 use warnings;
 
 use File::Basename qw(dirname);
 use File::Spec;
-use File::Path qw(make_path);
 
 my $root = File::Spec->catdir(dirname(dirname(__FILE__)));
 my $pkgbuild = File::Spec->catfile($root, 'PKGBUILD');
-my $outdir = File::Spec->catdir($root, 'build-pkg');
-my $exe = File::Spec->catfile($outdir, 'release_client.exe');
-
-my $no_build = grep { $_ eq '--no-build' } @ARGV;
-if (@ARGV && !$no_build) {
-    die "Usage: perl $0 [--no-build]\n";
-}
+my $cmakelists = File::Spec->catfile($root, 'CMakeLists.txt');
 
 sub read_file {
     my ($path) = @_;
@@ -31,62 +25,85 @@ sub read_file {
     return $data;
 }
 
-my $pkg = read_file($pkgbuild);
-my ($pkgname) = $pkg =~ /^\s*pkgname\s*=\s*(\S+)\s*$/m
-    or die "Could not find pkgname in $pkgbuild\n";
-my ($pkgver) = $pkg =~ /^\s*pkgver\s*=\s*(\S+)\s*$/m
-    or die "Could not find pkgver in $pkgbuild\n";
-my ($pkgrel) = $pkg =~ /^\s*pkgrel\s*=\s*(\d+)\s*$/m
-    or die "Could not find pkgrel in $pkgbuild\n";
-
-print "Package: $pkgname $pkgver-$pkgrel\n";
-
-# Sources listed in PKGBUILD build() must exist and compile.
-my @sources = $pkg =~ /^\s+"?\$startdir\/(src\/[\w\/.]+\.cpp)"?\s*\\?$/mg;
-die "No source files found in $pkgbuild\n" unless @sources;
-for my $src (@sources) {
-    my $path = File::Spec->catfile($root, split m{/}, $src);
-    die "Missing source: $src\n" unless -f $path;
-}
-printf "Sources (%d): OK\n", scalar @sources;
-
-if (!$no_build) {
-    make_path($outdir);
-    # Mirror the g++ invocation from PKGBUILD build():
-    # split into tokens, drop line-continuation backslashes, remove shell
-    # quotes and expand $startdir anywhere inside a token.
-    my ($gxx_line) = $pkg =~ /g\+\+(.*?)\n\s*-lcurl/s
-        or die "Could not find the g++ command in $pkgbuild\n";
-    my @flags;
-    for my $tok (split ' ', $gxx_line) {
-        next if $tok eq '\\';
-        $tok =~ s/"//g;
-        $tok =~ s/\$startdir/$root/g;
-        push @flags, $tok;
-    }
-    print "Compile: g++ @flags -lcurl\n";
-    chdir $root or die "Cannot enter $root: $!\n";
-    system('g++', @flags, '-lcurl') == 0
-        or die "Compilation failed (exit code $?)\n";
-    print "Build: OK\n";
+sub write_file {
+    my ($path, $data) = @_;
+    open my $fh, '>', $path or die "Unable to write $path: $!\n";
+    print {$fh} $data;
+    close $fh;
+    return;
 }
 
-die "Missing $exe - run without --no-build\n" unless -f $exe;
+# Replace exactly one `field = ...` line with `field = value`.
+sub set_field {
+    my ($data_ref, $field, $value, $path) = @_;
+    my $n = ($$data_ref =~ s/^(\s*\Q$field\E\s*=\s*).*\n/$1$value\n/mg);
+    die "Expected exactly one $field in $path, found $n\n" if $n != 1;
+    return;
+}
 
-# Verify the artifacts package() would install.
-my $license = File::Spec->catfile($root, 'LICENSE');
-die "Missing LICENSE (installed under mingw64/share/licenses/...)\n" unless -f $license;
+sub read_version {
+    my ($data, $path) = @_;
+    ($data =~ /^\s*pkgver\s*=\s*(\d+(?:\.\d+)*)\s*$/m)
+        or die "Could not find pkgver in $path\n";
+    return $1;
+}
 
-my $size = -s $exe;
-printf "Result: OK\n  %s (%d bytes)\n  LICENSE (present)\n",
-       $exe, $size;
+sub read_pkgrel {
+    my ($data, $path) = @_;
+    return ($data =~ /^\s*pkgrel\s*=\s*(\d+)\s*$/m) ? $1 : 1;
+}
 
-# Smoke test: binary must at least respond to --help.
-my $help_out = `$exe --help 2>&1`;
-if ($? == 0 && $help_out =~ /Usage/) {
-    print "Smoke test (--help): OK\n";
+sub bump {
+    my ($ver, $which) = @_;
+    my @p = split /\./, $ver;
+    while (@p < 3) { push @p, 0; }
+    if    ($which eq 'major') { @p = ($p[0] + 1, 0, 0); }
+    elsif ($which eq 'minor') { @p = ($p[0], $p[1] + 1, 0); }
+    else                      { @p = ($p[0], $p[1], $p[2] + 1); }
+    return join '.', @p;
+}
+
+my $mode = shift @ARGV // '';
+if (!grep { $mode eq $_ } qw(--major --minor --patch --bump-pkgrel)) {
+    $mode = shift @ARGV if $mode eq '' && @ARGV;
+    die "Usage: $0 [--major|--minor|--patch|--bump-pkgrel] <new-version>\n"
+        . "  or:     $0 0.2.0\n" unless defined($mode) && $mode =~ /^\d+(?:\.\d+)*$/;
+}
+
+my $data = read_file($pkgbuild);
+my $old = read_version($data, $pkgbuild);
+
+if ($mode eq '--bump-pkgrel') {
+    my $rel = read_pkgrel($data, $pkgbuild) + 1;
+    set_field(\$data, 'pkgrel', $rel, $pkgbuild);
+    write_file($pkgbuild, $data);
+    print "$pkgbuild: pkgrel -> $rel (pkgver $old unchanged)\n";
+    exit 0;
+}
+
+my $new;
+if ($mode =~ /^\d+(?:\.\d+)*$/) {
+    $new = $mode;
 } else {
-    print "Smoke test (--help): WARNING - output or exit code is unexpected\n";
+    my $which = $mode;
+    $which =~ s/^--//;
+    $new = bump($old, $which);
 }
 
-print "\nPackage ready for packaging: $pkgname $pkgver-$pkgrel\n";
+$new =~ /^\d+(?:\.\d+)*$/ or die "Invalid version: $new\n";
+
+set_field(\$data, 'pkgver', $new, $pkgbuild);
+set_field(\$data, 'pkgrel', 1, $pkgbuild);
+write_file($pkgbuild, $data);
+print "$pkgbuild: $old -> $new (pkgrel reset to 1)\n";
+
+# Sync CMakeLists.txt project(... VERSION x.y.z) when present.
+if (-f $cmakelists) {
+    my $cmake = read_file($cmakelists);
+    my $n = ($cmake =~ s/^(\s*project\s*\(\s*\w+\s+VERSION\s+)\d+(?:\.\d+)*/$1$new/m);
+    if ($n) {
+        die "Expected exactly one project(VERSION) in $cmakelists, found $n\n" if $n != 1;
+        write_file($cmakelists, $cmake);
+        print "$cmakelists: project VERSION -> $new\n";
+    }
+}
