@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <cstring>
 #include <cstdlib>
+#include <ctime>
 #include <exception>
 #include <iostream>
 #include <string>
@@ -17,26 +18,6 @@ namespace {
 #else
         return "development";
 #endif
-    }
-
-    void PrintUsage() {
-        std::printf(
-            "flutter - downloader for Dart SDK archives and Flutter release info\n"
-            "Version: %s\n"
-            "\n"
-            "Usage:\n"
-            "  flutter releases [--platform <platform>] [--channel <channel>] [--limit <n>]\n"
-            "      List releases from releases_<platform>.json (default: windows, stable, 10).\n"
-            "  flutter dart-latest [--channel <channel>]\n"
-            "      Print the newest Dart SDK version from dart-archive (default: stable).\n"
-            "  flutter dartsdk [--dest <dir>] [--channel <channel>]\n"
-            "      Download and extract the latest Dart SDK for Windows x64.\n"
-            "  flutter sdk <version> [--dest <dir>] [--channel <channel>]\n"
-            "                  [--os <os>] [--arch <arch>]\n"
-            "      Download dartsdk-<os>-<arch>-release.zip and verify SHA-256.\n"
-            "      Use --extract to extract into <dir>/dart-sdk, or --no-extract.\n"
-            "  flutter sha256 <file>\n"
-            "      Compute the SHA-256 of a file.\n", AppVersion());
     }
 
     std::string ArgValue(const std::vector<std::string>& args,
@@ -75,6 +56,20 @@ namespace {
         }
     }
 
+    std::string FormatDateMs(std::int64_t ms) {
+        if (ms <= 0) return "unknown";
+        std::time_t tt = static_cast<std::time_t>(ms / 1000);
+        std::tm t{};
+#ifdef _WIN32
+        gmtime_s(&t, &tt);
+#else
+        gmtime_r(&tt, &t);
+#endif
+        char buf[11];
+        std::strftime(buf, sizeof(buf), "%Y-%m-%d", &t);
+        return std::string(buf);
+    }
+
     void ProgressBar(std::uint64_t done, std::uint64_t total) {
         if (total == 0) {
             std::printf("\rDownloaded %s   ", Utils::HumanSize(done).c_str());
@@ -111,10 +106,10 @@ namespace {
         for (const auto& r : all.releases) {
             if (!channel.empty() && Utils::ToLower(r.channel) != Utils::ToLower(channel)) continue;
             if (shown++ >= limit) break;
-            std::printf("%-12s %-10s %-16s %-34s %lld\n",
+            std::printf("%-12s %-10s %-16s %-34s %s\n",
                         r.channel.c_str(), r.version.c_str(), r.dart_sdk_version.c_str(),
                         Utils::Trim(r.hash).substr(0, 32).c_str(),
-                        static_cast<long long>(r.release_date_ms));
+                        FormatDateMs(r.release_date_ms).c_str());
         }
         if (shown == 0) {
             std::printf("No releases for channel \"%s\".\n", channel.c_str());
@@ -185,7 +180,6 @@ namespace {
 int main(int argc, char** argv) {
     std::vector<std::string> args(argv + 1, argv + argc);
     if (args.empty()) {
-        PrintUsage();
         return 2;
     }
 
@@ -208,11 +202,9 @@ int main(int argc, char** argv) {
         }
         if (cmd == "sha256")       return CmdSha256(rest);
         if (cmd == "help" || cmd == "--help" || cmd == "-h") {
-            PrintUsage();
             return 0;
         }
         std::fprintf(stderr, "Unknown command: %s\n\n", cmd.c_str());
-        PrintUsage();
         return 2;
     } catch (const std::exception& e) {
         std::fprintf(stderr, "Error: %s\n", e.what());
