@@ -28,28 +28,35 @@ int wmain(int argc, wchar_t* argv[]) {
         std::filesystem::path(module_path).parent_path() /
         L".." / L"lib" / L"flutter" / L"bin" / L"flutter.bat";
 
-    std::wstring parameters;
+    std::wstring command_line = L"cmd.exe /d /c \"\"" + flutter_bat.wstring() + L"\"";
     for (int index = 1; index < argc; ++index) {
-        if (!parameters.empty()) {
-            parameters += L' ';
-        }
-        parameters += QuoteArgument(argv[index]);
+        command_line += L' ';
+        command_line += QuoteArgument(argv[index]);
     }
+    command_line += L'\"';
 
-    SHELLEXECUTEINFOW execute_info{};
-    execute_info.cbSize = sizeof(execute_info);
-    execute_info.fMask = SEE_MASK_NOCLOSEPROCESS;
-    execute_info.lpFile = flutter_bat.c_str();
-    execute_info.lpParameters = parameters.c_str();
-    execute_info.nShow = SW_SHOW;
+    STARTUPINFOW startup_info{};
+    startup_info.cb = sizeof(startup_info);
+    PROCESS_INFORMATION process_info{};
 
-    if (!ShellExecuteExW(&execute_info)) {
+    if (!CreateProcessW(
+            nullptr,
+            command_line.data(),
+            nullptr,
+            nullptr,
+            FALSE,
+            CREATE_UNICODE_ENVIRONMENT,
+            nullptr,
+            nullptr,
+            &startup_info,
+            &process_info)) {
         return 1;
     }
 
-    WaitForSingleObject(execute_info.hProcess, INFINITE);
+    WaitForSingleObject(process_info.hProcess, INFINITE);
     DWORD exit_code = 1;
-    GetExitCodeProcess(execute_info.hProcess, &exit_code);
-    CloseHandle(execute_info.hProcess);
+    GetExitCodeProcess(process_info.hProcess, &exit_code);
+    CloseHandle(process_info.hThread);
+    CloseHandle(process_info.hProcess);
     return static_cast<int>(exit_code);
 }
