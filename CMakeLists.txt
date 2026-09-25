@@ -29,3 +29,12 @@ target_link_libraries(core PUBLIC ${CURL_LIBRARY})
 
 add_executable(release_client src/release_client.cpp)
 target_link_libraries(release_client PRIVATE core)
+
+if(WIN32)
+    add_executable(flutter_launcher src/flutter_launcher.cpp)
+    target_link_libraries(flutter_launcher PRIVATE shell32)
+    set_target_properties(flutter_launcher PROPERTIES OUTPUT_NAME flutter)
+    if(MINGW)
+        target_link_options(flutter_launcher PRIVATE -municode)
+    endif()
+endif()

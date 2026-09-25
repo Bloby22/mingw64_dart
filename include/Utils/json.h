@@ -48,6 +48,6 @@ namespace Utils {
         std::string Dump(std::size_t indent = 0) const;
     };
 
-    // Rozparsuje text; pri chybe hodi std::runtime_error s pozici.
+    // Parse the text; on failure, throw std::runtime_error with the position.
     JsonPtr JsonParse(const std::string& text);
 }

@@ -6,17 +6,15 @@ pkgrel=1
 pkgdesc='CLI tool for downloading Dart SDK and Flutter release info from Google Cloud Storage'
 arch=('any')
 mingw_arch=('x86_64')
-url='https://github.com/BlobyCZ/mingw64_dart'
+url='https://github.com/Bloby22/mingw64_dart'
 license=('MIT')
 depends=('mingw-w64-x86_64-curl' 'mingw-w64-x86_64-gcc-libs')
 
-_commit=290f44de44a0c9afc6e760d694b5e27fc4927701
-source=("mingw64_dart::git+https://github.com/Bloby22/mingw64_dart.git#commit=${_commit}")
-sha256sums=('SKIP')
-
 build() {
-    cd "$srcdir/mingw64_dart"
-    mkdir -p "$srcdir/build-pkg"
+    local root
+    root=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)
+    cd "$root"
+    mkdir -p build-pkg
     ${CXX} ${CPPFLAGS} ${CXXFLAGS} -std=c++20 -DNDEBUG -DAPP_VERSION=\"${pkgver}\" \
         -Iinclude \
         src/API/google_storage.cpp \
@@ -25,7 +23,7 @@ build() {
         src/Utils/json.cpp \
         src/Utils/strings.cpp \
         src/release_client.cpp \
-        -o "$srcdir/build-pkg/release_client.exe" \
+        -o "build-pkg/release_client.exe" \
         ${LDFLAGS} \
         -lcurl
 
@@ -37,21 +35,23 @@ build() {
 
     dart_archive="dartsdk-windows-x64-release.zip"
     dart_url="https://storage.googleapis.com/dart-archive/channels/stable/release/${dart_version}/sdk/${dart_archive}"
-    curl -fL --retry 3 -o "$srcdir/build-pkg/${dart_archive}" "$dart_url"
+    curl -fL --retry 3 -o "build-pkg/${dart_archive}" "$dart_url"
     dart_sha=$(curl -fsSL "${dart_url}.sha256sum" | awk '{print $1}')
     [[ -n "$dart_sha" ]] || { echo 'Could not download the Dart SDK checksum' >&2; return 1; }
-    printf '%s  %s\n' "$dart_sha" "$srcdir/build-pkg/${dart_archive}" | sha256sum -c -
+    printf '%s  %s\n' "$dart_sha" "build-pkg/${dart_archive}" | sha256sum -c -
 
-    rm -rf "$srcdir/build-pkg/dart-sdk"
-    bsdtar -xf "$srcdir/build-pkg/${dart_archive}" -C "$srcdir/build-pkg"
+    rm -rf build-pkg/dart-sdk
+    bsdtar -xf "build-pkg/${dart_archive}" -C build-pkg
 }
 
 package() {
-    install -Dm755 "$srcdir/build-pkg/release_client.exe" "$pkgdir/mingw64/bin/release_client.exe"
-    install -Dm755 "$srcdir/build-pkg/release_client.exe" "$pkgdir/mingw64/bin/flutter-cli.exe"
-    install -Dm755 "$srcdir/build-pkg/release_client.exe" "$pkgdir/mingw64/bin/flutter.exe"
+    local root
+    root=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)
+    install -Dm755 "$root/build-pkg/release_client.exe" "$pkgdir/mingw64/bin/release_client.exe"
+    install -Dm755 "$root/build-pkg/release_client.exe" "$pkgdir/mingw64/bin/flutter-cli.exe"
+    install -Dm755 "$root/build-pkg/release_client.exe" "$pkgdir/mingw64/bin/flutter.exe"
     install -d "$pkgdir/mingw64/lib"
-    cp -a "$srcdir/build-pkg/dart-sdk" "$pkgdir/mingw64/lib/"
+    cp -a "$root/build-pkg/dart-sdk" "$pkgdir/mingw64/lib/"
     ln "$pkgdir/mingw64/lib/dart-sdk/bin/dart.exe" "$pkgdir/mingw64/bin/dart.exe"
-    install -Dm644 "$srcdir/mingw64_dart/LICENSE" "$pkgdir/mingw64/share/licenses/$pkgname/LICENSE"
+    install -Dm644 "$root/LICENSE" "$pkgdir/mingw64/share/licenses/$pkgname/LICENSE"
 }

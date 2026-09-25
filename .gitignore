@@ -1,3 +1,7 @@
 .freebuff/
 build/
+build-mingw/
+build-pkg/
+pkg/
+*.pkg.tar.zst
 *.cmake

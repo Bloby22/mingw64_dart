@@ -36,7 +36,9 @@ makepkg -f
 pacman -U mingw-w64-x86_64-mingw64-dart-*.pkg.tar.zst
 ```
 
-The package provides `flutter`, `flutter-cli`, and `release_client`.
+The package provides `flutter`, `flutter-cli`, `release_client`, and the real
+`dart.exe` from the official Dart SDK. The complete SDK is installed under
+`/mingw64/lib/dart-sdk`.
 
 ## Usage
 
