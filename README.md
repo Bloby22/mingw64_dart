@@ -2,13 +2,6 @@
 
 A native **Dart SDK** downloader and installer for MSYS2 MinGW64.
 
-## ⚡ Quick Install (Recommended)
-
-For most users, use the official MSYS2 package:
-
-```bash
-pacman -S mingw-w64-x86_64-dart
-```
 --- 
 
 ## 📄 License
