@@ -1,24 +1,20 @@
-# mingw64-dart (ARCHIVED)
+# 🎯 mingw64-dart
 
-**This project has been integrated into the official MSYS2 MINGW-packages repository.**
+A native **Dart SDK** downloader and installer for MSYS2 MinGW64.
 
-## Installation
+## ⚡ Quick Install (Recommended)
 
-To install Dart SDK and Flutter for MSYS2 MinGW64, use:
+For most users, use the official MSYS2 package:
 
 ```bash
 pacman -S mingw-w64-x86_64-dart
 ```
+--- 
 
-This provides:
-- Dart SDK (dart.exe)
-- Flutter SDK (flutter.bat)
-- All dependencies
+## 📄 License
 
-## About this Repository
+- **This Project**: MIT License (see [LICENSE](LICENSE))
+- **Dart SDK**: BSD License (Google)
+- **Flutter SDK**: BSD License (Google)
 
-This repository was the original development of a Dart SDK downloader for MSYS2. The functionality is now maintained as an official PKGBUILD package in:
-
-https://github.com/msys2/MINGW-packages/tree/master/mingw-w64-dart
-
-See the PR: https://github.com/msys2/MINGW-packages/pull/62835
+For full license details, see the LICENSE file in this repository.
