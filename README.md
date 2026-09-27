@@ -3,7 +3,7 @@
 A native **Dart SDK** downloader and installer for MSYS2 MinGW64.
 
 # Examples
-https://github.com/Bloby22/mingw64_dart/blob/main/examples/mingw.png
+![MINGW64 Dart Setup](examples/mingw.png)
 
 --- 
 
