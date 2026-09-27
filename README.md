@@ -44,30 +44,6 @@ flutter --version
 | Architecture | Support | Status |
 |-------------|---------|--------|
 | mingw64 (x86_64) | ✅ | Tested & Working |
-| mingw32 (i686) | ✅ | Tested & Working |
-| ucrt64 | ✅ | Tested & Working |
-| clang64 | ✅ | Tested & Working |
-| clangarm64 | ✅ | Tested & Working |
-
----
-
-## 📝 Examples
-
-### Command Line Usage
-
-```powershell
-PS D:\Dev\Project1\myapp> where.exe flutter
-D:\MSYS64\mingw64\bin\flutter.exe
-
-PS D:\Dev\Project1\myapp> where.exe dart
-D:\MSYS64\mingw64\bin\dart.exe
-
-PS D:\Dev\Project1\myapp> dart --version
-Dart SDK version: 3.13.4
-
-PS D:\Dev\Project1\myapp> flutter --version
-Flutter 3.47.5
-```
 
 ---
 
