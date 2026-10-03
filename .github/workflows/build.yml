@@ -1,0 +1,46 @@
+name: Build package
+
+on:
+  pull_request:
+    paths:
+      - PKGBUILD
+      - .github/workflows/build.yml
+  push:
+    branches: [main]
+    paths:
+      - PKGBUILD
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            base-devel
+            mingw-w64-x86_64-gcc
+
+      - name: Build package
+        run: makepkg -sf --noconfirm
+
+      - name: Install package
+        run: pacman -U --noconfirm mingw-w64-x86_64-dart-*.pkg.tar.zst
+
+      - name: Smoke test
+        run: |
+          which dart flutter
+          dart --version
+          flutter --version
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: package
+          path: mingw-w64-x86_64-dart-*.pkg.tar.zst
