@@ -3,5 +3,6 @@ build/
 build-mingw/
 build-pkg/
 pkg/
+src/*.pkg.tar.zst
 *.pkg.tar.zst
 *.cmake
