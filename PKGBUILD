@@ -1,6 +1,6 @@
 # Maintainer: BlobyCZ
 pkgname=mingw-w64-x86_64-dart
-pkgver=0.1.5
+pkgver=0.1.6
 pkgrel=1
 
 pkgdesc='Dart and Flutter SDKs for MinGW64 (native flutter.exe and dart.exe launchers)'
@@ -20,8 +20,8 @@ makedepends=(
     'mingw-w64-x86_64-gcc'
 )
 
-_dart_version=3.13.4
-_flutter_version=3.47.5
+_dart_version=3.13.5
+_flutter_version=3.47.6
 
 _dart_archive="dartsdk-windows-x64-release.zip"
 _flutter_archive="flutter_windows_${_flutter_version}-stable.zip"
@@ -32,8 +32,8 @@ source=(
 )
 
 sha256sums=(
-    'c38bcecee16b348694d4acc72b3781e5fa0e8766a4d0d1576182c7204ab3d763'
-    '0ccd71931f49c2fbe394b1eeb6d79af3d624058a043ea0d03d34160581624fb8'
+    'aed8e4a8932ce8fa18ea32f990e43b4a1c9390a4c73777ab6fdf77fc9f4524d1'
+    'a01bb0d26de91bc23c97cd9ccfaad281a612fb8304213fdd5df1119a09404796'
 )
 
 noextract=(
