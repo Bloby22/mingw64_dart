@@ -4,7 +4,7 @@
 [![GitHub Release](https://img.shields.io/github/v/release/Bloby22/mingw64_dart?color=success)](https://github.com/Bloby22/mingw64_dart/releases)
 [![Build](https://github.com/Bloby22/mingw64_dart/actions/workflows/build.yml/badge.svg)](https://github.com/Bloby22/mingw64_dart/actions/workflows/build.yml)
 
-Dart SDK and Flutter SDK packaged for **MSYS2 MinGW64**, with native `dart.exe` and `flutter.exe` launchers.
+Dart SDK packaged for **MSYS2 MinGW64**, with native `dart.exe` launcher.
 
 ---
 
@@ -30,7 +30,6 @@ flutter --version
 ## 📦 What's Included
 
 - Dart SDK 3.13.5
-- Flutter SDK 3.47.6
 - Native launchers (`dart.exe`, `flutter.exe`) that work inside MSYS2 bash
 - MINGW64 only (UCRT64 and CLANG64 are not supported)
 
