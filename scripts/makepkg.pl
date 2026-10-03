@@ -1,10 +1,12 @@
 #!/usr/bin/env perl
-# Packaging sanity check: rebuild the PKGBUILD g++ command and verify the
-# resulting package layout, without needing makepkg or a pacman environment.
+# Quick sanity check of the packaging inputs, without running makepkg.
 #
 # Usage:
-#   perl scripts/makepkg.pl           # build into build-pkg/ and verify
-#   perl scripts/makepkg.pl --no-build  # verify existing build-pkg/ only
+#   perl scripts/makepkg.pl             # check PKGBUILD, compile launcher
+#   perl scripts/makepkg.pl --no-build  # check PKGBUILD and files only
+#
+# The launcher is built with gcc into build-pkg/dart.exe (the same command
+# the PKGBUILD uses), so run this inside an MSYS2 MINGW64 shell.
 use strict;
 use warnings;
 
@@ -12,15 +14,14 @@ use File::Basename qw(dirname);
 use File::Spec;
 use File::Path qw(make_path);
 
-my $root = File::Spec->catdir(dirname(dirname(__FILE__)));
+my $root     = File::Spec->catdir(dirname(dirname(__FILE__)));
 my $pkgbuild = File::Spec->catfile($root, 'PKGBUILD');
-my $outdir = File::Spec->catdir($root, 'build-pkg');
-my $exe = File::Spec->catfile($outdir, 'release_client.exe');
+my $outdir   = File::Spec->catdir($root, 'build-pkg');
+my $exe      = File::Spec->catfile($outdir, 'dart.exe');
+my $src      = File::Spec->catfile($root, 'src', 'launcher.c');
 
 my $no_build = grep { $_ eq '--no-build' } @ARGV;
-if (@ARGV && !$no_build) {
-    die "Usage: perl $0 [--no-build]\n";
-}
+die "Usage: perl $0 [--no-build]\n" if @ARGV && !(@ARGV == 1 && $no_build);
 
 sub read_file {
     my ($path) = @_;
@@ -32,61 +33,28 @@ sub read_file {
 }
 
 my $pkg = read_file($pkgbuild);
-my ($pkgname) = $pkg =~ /^\s*pkgname\s*=\s*(\S+)\s*$/m
-    or die "Could not find pkgname in $pkgbuild\n";
-my ($pkgver) = $pkg =~ /^\s*pkgver\s*=\s*(\S+)\s*$/m
-    or die "Could not find pkgver in $pkgbuild\n";
-my ($pkgrel) = $pkg =~ /^\s*pkgrel\s*=\s*(\d+)\s*$/m
-    or die "Could not find pkgrel in $pkgbuild\n";
+die "PKGBUILD contains CRLF line endings; makepkg cannot source it\n" if $pkg =~ /\r/;
 
-print "Package: $pkgname $pkgver-$pkgrel\n";
+my ($pkgname) = $pkg =~ /^pkgname=(\S+)\s*$/m or die "pkgname not found\n";
+my ($pkgver)  = $pkg =~ /^pkgver=(\S+)\s*$/m  or die "pkgver not found\n";
+my ($pkgrel)  = $pkg =~ /^pkgrel=(\d+)\s*$/m  or die "pkgrel not found\n";
+my ($dart)    = $pkg =~ /^_dart_version=(\S+)\s*$/m or die "_dart_version not found\n";
+print "Package: $pkgname $pkgver-$pkgrel (Dart $dart)\n";
 
-# Sources listed in PKGBUILD build() must exist and compile.
-my @sources = $pkg =~ /^\s+"?(?:\$startdir\/)?(src\/[\w\/.]+\.cpp)"?\s*\\?$/mg;
-die "No source files found in $pkgbuild\n" unless @sources;
-for my $src (@sources) {
-    my $path = File::Spec->catfile($root, split m{/}, $src);
-    die "Missing source: $src\n" unless -f $path;
+($pkg =~ /sha256sums=\(\s*\n\s*'[0-9a-f]{64}'\s*\n?\s*\)/)
+    or die "sha256sums must contain exactly one 64-hex entry\n";
+print "sha256sums: OK\n";
+
+for my $f ($src, File::Spec->catfile($root, 'LICENSE')) {
+    die "Missing file referenced by package(): $f\n" unless -f $f;
 }
-printf "Sources (%d): OK\n", scalar @sources;
+print "Files: OK\n";
 
 if (!$no_build) {
     make_path($outdir);
-    # Mirror the g++ invocation from PKGBUILD build():
-    # split into tokens, drop line-continuation backslashes, remove shell
-    # quotes and expand $startdir anywhere inside a token.
-    my ($gxx_line) = $pkg =~ /g\+\+(.*?)\n\s*-lcurl/s
-        or die "Could not find the g++ command in $pkgbuild\n";
-    my @flags;
-    for my $tok (split ' ', $gxx_line) {
-        next if $tok eq '\\';
-        $tok =~ s/"//g;
-        $tok =~ s/\$startdir/$root/g;
-        push @flags, $tok;
-    }
-    print "Compile: g++ @flags -lcurl\n";
-    chdir $root or die "Cannot enter $root: $!\n";
-    system('g++', @flags, '-lcurl') == 0
-        or die "Compilation failed (exit code $?)\n";
-    print "Build: OK\n";
+    system('gcc', '-O2', '-s', '-municode', '-o', $exe, $src) == 0
+        or die "Launcher compilation failed (exit code $?)\n";
+    printf "Launcher: OK (%d bytes)\n", -s $exe;
 }
 
-die "Missing $exe - run without --no-build\n" unless -f $exe;
-
-# Verify the artifacts package() would install.
-my $license = File::Spec->catfile($root, 'LICENSE');
-die "Missing LICENSE (installed under mingw64/share/licenses/...)\n" unless -f $license;
-
-my $size = -s $exe;
-printf "Result: OK\n  %s (%d bytes)\n  LICENSE (present)\n",
-       $exe, $size;
-
-# Smoke test: binary must at least respond to --help.
-my $help_out = `$exe --help 2>&1`;
-if ($? == 0 && $help_out =~ /Usage/) {
-    print "Smoke test (--help): OK\n";
-} else {
-    print "Smoke test (--help): WARNING - output or exit code is unexpected\n";
-}
-
-print "\nPackage ready for packaging: $pkgname $pkgver-$pkgrel\n";
+print "\nReady for: makepkg -sf\n";
