@@ -1,6 +1,8 @@
-PKGBUILD linguist-language=Shell
-*linguist-vendored
+* text=auto eol=lf
 
+PKGBUILD linguist-language=Shell
 PKGBUILD text eol=lf
 *.sh text eol=lf
 *.pl text eol=lf
+
+*.png binary
