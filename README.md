@@ -4,36 +4,33 @@
 [![GitHub Release](https://img.shields.io/github/v/release/Bloby22/mingw64_dart?color=success)](https://github.com/Bloby22/mingw64_dart/releases)
 [![Build](https://github.com/Bloby22/mingw64_dart/actions/workflows/build.yml/badge.svg)](https://github.com/Bloby22/mingw64_dart/actions/workflows/build.yml)
 
-Dart SDK packaged for **MSYS2 MinGW64**, with native `dart.exe` launcher.
+Dart SDK packaged for **MSYS2 MinGW64**, with a native `dart.exe` launcher.
 
 ---
 
 ## ⚡ Quick Install
 
-Download the latest `.pkg.tar.zst` from the [Releases page](https://github.com/Bloby22/mingw64_dart/releases) and install it in an **MSYS2 MINGW64** terminal:
+In an **MSYS2 MINGW64** terminal:
 
 ```bash
-pacman -U mingw-w64-x86_64-dart-<version>-1-any.pkg.tar.zst
+pacman -U https://github.com/Bloby22/mingw64_dart/releases/latest/download/mingw-w64-x86_64-dart-latest.pkg.tar.zst
 ```
 
 Verify:
 
 ```bash
 dart --version
-flutter --version
 ```
-
-> The first `flutter` run builds the Flutter tool, which takes a moment.
 
 ---
 
 ## 📦 What's Included
 
 - Dart SDK 3.13.5
-- Native launchers (`dart.exe`, `flutter.exe`) that work inside MSYS2 bash
+- Native `dart.exe` launcher that works inside MSYS2 bash
 - MINGW64 only (UCRT64 and CLANG64 are not supported)
 
-Versions are updated automatically: a daily GitHub Actions workflow opens a pull request with the latest releases and official SHA256 checksums, and CI builds and tests the package before it is merged.
+Versions are updated automatically: a daily GitHub Actions workflow opens a pull request with the latest stable Dart release and its official SHA256 checksum, and CI builds and tests the package before it is released.
 
 ---
 
@@ -54,7 +51,7 @@ cd mingw64_dart
 makepkg -si
 ```
 
-The build downloads about 2 GB (mostly Flutter), so it takes a while.
+The build downloads about 200 MB.
 
 ---
 
@@ -62,7 +59,6 @@ The build downloads about 2 GB (mostly Flutter), so it takes a while.
 
 - **This project**: MIT License
 - **Dart SDK**: BSD License (Google)
-- **Flutter SDK**: BSD License (Google)
 
 ---
 
