@@ -26,7 +26,7 @@ flutter --version
 - Dart SDK 3.13.4
 - Flutter SDK 3.47.5
 - Pre-built binaries
-- All architectures supported
+- MINGW64 supported!
 
 ---
 
