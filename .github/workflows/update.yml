@@ -1,0 +1,43 @@
+name: Update Dart/Flutter
+
+on:
+  schedule:
+    - cron: '17 5 * * *'
+  workflow_dispatch:
+  
+  permissions: 
+    contents: write
+    pull-requests: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run auto.pl
+        run: perl scripts/auto.pl
+
+      - name: Read new versions
+        id: ver
+        run: |
+          echo "dart=$(grep -m1 '^_dart_version=' PKGBUILD | cut -d= -f2)" >> "$GITHUB_OUTPUT"
+          echo "flutter=$(grep -m1 '^_flutter_version=' PKGBUILD | cut -d= -f2)" >> "$GITHUB_OUTPUT"
+          echo "pkgver=$(grep -m1 '^pkgver=' PKGBUILD | cut -d= -f2)" >> "$GITHUB_OUTPUT"
+
+      - name: Open pull request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: "Update to Dart ${{ steps.ver.outputs.dart }} / Flutter ${{ steps.ver.outputs.flutter }}"
+          branch: auto/update-sdks
+          delete-branch: true
+          title: "Update to Dart ${{ steps.ver.outputs.dart }} / Flutter ${{ steps.ver.outputs.flutter }}"
+          body: |
+            Automated update by `scripts/auto.pl`.
+
+            - Dart: `${{ steps.ver.outputs.dart }}`
+            - Flutter: `${{ steps.ver.outputs.flutter }}`
+            - Package version: `${{ steps.ver.outputs.pkgver }}`
+
+            Checksums come from the official Google Storage metadata.
+          add-paths: PKGBUILD
