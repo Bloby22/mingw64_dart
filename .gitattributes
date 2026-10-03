@@ -1,2 +1,4 @@
 PKGBUILD linguist-language=Shell
 *linguist-vendored
+
+PKGBUILD text eol=lf
