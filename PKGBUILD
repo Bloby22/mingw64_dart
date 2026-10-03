@@ -1,9 +1,9 @@
 # Maintainer: BlobyCZ
 pkgname=mingw-w64-x86_64-dart
-pkgver=0.1.6
+pkgver=0.1.7
 pkgrel=1
 
-pkgdesc='Dart and Flutter SDKs for MinGW64 (native flutter.exe and dart.exe launchers)'
+pkgdesc='Dart SDK for MinGW64 (native dart.exe launcher)'
 arch=('any')
 mingw_arch=('x86_64')
 
@@ -21,24 +21,19 @@ makedepends=(
 )
 
 _dart_version=3.13.5
-_flutter_version=3.47.6
 
 _dart_archive="dartsdk-windows-x64-release.zip"
-_flutter_archive="flutter_windows_${_flutter_version}-stable.zip"
 
 source=(
     "${_dart_archive}::https://storage.googleapis.com/dart-archive/channels/stable/release/${_dart_version}/sdk/${_dart_archive}"
-    "${_flutter_archive}::https://storage.googleapis.com/flutter_infra_release/releases/stable/windows/${_flutter_archive}"
 )
 
 sha256sums=(
     'aed8e4a8932ce8fa18ea32f990e43b4a1c9390a4c73777ab6fdf77fc9f4524d1'
-    'a01bb0d26de91bc23c97cd9ccfaad281a612fb8304213fdd5df1119a09404796'
 )
 
 noextract=(
     "${_dart_archive}"
-    "${_flutter_archive}"
 )
 
 build() {
@@ -53,19 +48,9 @@ build() {
         return 1
     fi
 
-    echo "==> Extracting Flutter SDK..."
-    rm -rf "${srcdir}/build-pkg/flutter"
-    bsdtar -xf "${srcdir}/${_flutter_archive}" -C "${srcdir}/build-pkg"
-
-    if [[ ! -d "${srcdir}/build-pkg/flutter" ]]; then
-        echo "ERROR: Flutter SDK extraction failed."
-        return 1
-    fi
-
     chmod -R u+w "${srcdir}/build-pkg/dart-sdk"
-    chmod -R u+w "${srcdir}/build-pkg/flutter"
 
-    echo "==> Building native launchers..."
+    echo "==> Building native launcher..."
 
     cat > "${srcdir}/launcher.c" <<'EOF'
 #include <windows.h>
@@ -137,7 +122,6 @@ int wmain(void) {
     wchar_t *cmd = (wchar_t *)malloc(len * sizeof(wchar_t));
     if (!cmd) return 1;
 
-#ifdef LAUNCH_DART
     wchar_t dart[BUF];
     _snwprintf(dart, BUF, L"%ls\\lib\\dart-sdk\\bin\\dart.exe", prefix);
     if (!file_exists(dart)) {
@@ -146,39 +130,12 @@ int wmain(void) {
     }
     _snwprintf(cmd, len, L"\"%ls\" %ls", dart, rest);
     return run(cmd);
-#else
-    wchar_t root[BUF], bat[BUF], dart[BUF], snap[BUF], pkgcfg[BUF];
-    _snwprintf(root, BUF, L"%ls\\lib\\flutter", prefix);
-    _snwprintf(bat, BUF, L"%ls\\bin\\flutter.bat", root);
-    _snwprintf(dart, BUF, L"%ls\\bin\\cache\\dart-sdk\\bin\\dart.exe", root);
-    _snwprintf(snap, BUF, L"%ls\\bin\\cache\\flutter_tools.snapshot", root);
-    _snwprintf(pkgcfg, BUF,
-               L"%ls\\packages\\flutter_tools\\.dart_tool\\package_config.json", root);
-
-    if (file_exists(dart) && file_exists(snap) && file_exists(pkgcfg)) {
-        /* Normal run: bundled Dart + Flutter tool snapshot, no cmd.exe */
-        SetEnvironmentVariableW(L"FLUTTER_ROOT", root);
-        _snwprintf(cmd, len,
-                   L"\"%ls\" --disable-dart-dev --packages=\"%ls\" \"%ls\" %ls",
-                   dart, pkgcfg, snap, rest);
-    } else if (file_exists(bat)) {
-        /* First run only: flutter.bat bootstraps the cache */
-        _snwprintf(cmd, len, L"cmd.exe /d /s /c \"\"%ls\" %ls\"", bat, rest);
-    } else {
-        fwprintf(stderr, L"flutter: SDK not found: %ls\n", bat);
-        return 1;
-    }
-    return run(cmd);
-#endif
 }
 EOF
 
-    gcc -O2 -s -municode -DLAUNCH_DART \
-        -o "${srcdir}/dart.exe" "${srcdir}/launcher.c"
-    gcc -O2 -s -municode \
-        -o "${srcdir}/flutter.exe" "${srcdir}/launcher.c"
+    gcc -O2 -s -municode -o "${srcdir}/dart.exe" "${srcdir}/launcher.c"
 
-    [[ -f "${srcdir}/dart.exe" && -f "${srcdir}/flutter.exe" ]] || return 1
+    [[ -f "${srcdir}/dart.exe" ]] || return 1
 }
 
 package() {
@@ -186,12 +143,8 @@ package() {
     install -d "${pkgdir}${MINGW_PREFIX}/lib"
     cp -a "${srcdir}/build-pkg/dart-sdk" "${pkgdir}${MINGW_PREFIX}/lib/dart-sdk"
 
-    echo "==> Installing Flutter SDK..."
-    cp -a "${srcdir}/build-pkg/flutter" "${pkgdir}${MINGW_PREFIX}/lib/flutter"
-
-    echo "==> Installing launchers..."
+    echo "==> Installing launcher..."
     install -Dm755 "${srcdir}/dart.exe" "${pkgdir}${MINGW_PREFIX}/bin/dart.exe"
-    install -Dm755 "${srcdir}/flutter.exe" "${pkgdir}${MINGW_PREFIX}/bin/flutter.exe"
 
     # Licenses
     install -d "${pkgdir}${MINGW_PREFIX}/share/licenses/${pkgname}"
@@ -216,14 +169,9 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 EOF
 
-    # SDK licenses (BSD)
+    # SDK license (BSD)
     if [[ -f "${srcdir}/build-pkg/dart-sdk/LICENSE" ]]; then
         install -Dm644 "${srcdir}/build-pkg/dart-sdk/LICENSE" \
             "${pkgdir}${MINGW_PREFIX}/share/licenses/${pkgname}/DART-LICENSE"
-    fi
-
-    if [[ -f "${srcdir}/build-pkg/flutter/LICENSE" ]]; then
-        install -Dm644 "${srcdir}/build-pkg/flutter/LICENSE" \
-            "${pkgdir}${MINGW_PREFIX}/share/licenses/${pkgname}/FLUTTER-LICENSE"
     fi
 }
