@@ -112,8 +112,6 @@ jobs:
           \`\`\`bash
           pacman -U https://github.com/${{ github.repository }}/releases/download/$dart-$rel/mingw-w64-x86_64-dart-latest.pkg.tar.zst
           \`\`\`
-
-          Source: https://storage.googleapis.com/dart-archive/channels/stable/release/$dart/sdk/dartsdk-windows-x64-release.zip
           EOF
 
       - name: Create release
