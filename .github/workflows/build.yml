@@ -33,6 +33,8 @@ jobs:
         run: git config --global core.autocrlf false
 
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: msys2/setup-msys2@v2
         with:
@@ -70,13 +72,55 @@ jobs:
           name: package
           path: mingw-w64-x86_64-dart-latest.pkg.tar.zst
 
+      - name: Write release notes
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          dart="${{ steps.ver.outputs.dart }}"
+          rel="${{ steps.ver.outputs.rel }}"
+          pkg=$(ls mingw-w64-x86_64-dart-[0-9]*.pkg.tar.zst)
+          pkg_sha=$(sha256sum "$pkg" | cut -d' ' -f1)
+          sdk_sha=$(grep -m1 -oE "'[0-9a-f]{64}'" PKGBUILD | tr -d "'")
+          date=$(curl -fsSL "https://storage.googleapis.com/dart-archive/channels/stable/release/$dart/VERSION" \
+                 | sed -n 's/.*"date": *"\([^"]*\)".*/\1/p' || true)
+          prev=$(git describe --tags --abbrev=0 2>/dev/null || true)
+          if [ -n "$prev" ]; then
+            changes=$(git log --pretty='- %s (%h)' "$prev"..HEAD)
+          else
+            changes=$(git log --pretty='- %s (%h)')
+          fi
+
+          cat > release-notes.md <<EOF
+          ## Dart $dart (package release $rel)
+
+          | | |
+          |---|---|
+          | Dart SDK | $dart (stable channel) |
+          | Dart release date | ${date:-unknown} |
+          | Package | \`$pkg\` |
+          | Platform | MSYS2 MINGW64 |
+
+          ### What changed
+          $changes
+
+          ### Checksums (SHA-256)
+          - Dart SDK archive: \`$sdk_sha\`
+          - Package: \`$pkg_sha\`
+
+          ### Install
+          \`\`\`bash
+          pacman -U https://github.com/${{ github.repository }}/releases/download/$dart-$rel/mingw-w64-x86_64-dart-latest.pkg.tar.zst
+          \`\`\`
+
+          Source: https://storage.googleapis.com/dart-archive/channels/stable/release/$dart/sdk/dartsdk-windows-x64-release.zip
+          EOF
+
       - name: Create release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.ver.outputs.dart }}-${{ steps.ver.outputs.rel }}
-          name: Dart ${{ steps.ver.outputs.dart }} (pkgrel ${{ steps.ver.outputs.rel }})
-          generate_release_notes: true
+          name: Dart ${{ steps.ver.outputs.dart }}
+          body_path: release-notes.md
           files: |
             mingw-w64-x86_64-dart-[0-9]*.pkg.tar.zst
             mingw-w64-x86_64-dart-latest.pkg.tar.zst
