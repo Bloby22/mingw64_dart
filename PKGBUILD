@@ -1,40 +1,33 @@
 # Maintainer: BlobyCZ
-pkgname=mingw-w64-x86_64-dart
-pkgver=0.1.7
+_dart_version=3.13.5
+_realname=dart
+pkgname="${MINGW_PACKAGE_PREFIX}-${_realname}"
+pkgver=${_dart_version//-/_}
 pkgrel=1
 
 pkgdesc='Dart SDK for MinGW64 (native dart.exe launcher)'
 arch=('any')
-mingw_arch=('x86_64')
-
+mingw_arch=('mingw64')
 url='https://github.com/Bloby22/mingw64_dart'
-license=('MIT' 'BSD')
-
+license=('spdx:MIT' 'spdx:BSD-3-Clause')
 options=('!strip')
 
-depends=(
-    'mingw-w64-x86_64-gcc-libs'
-)
-
-makedepends=(
-    'mingw-w64-x86_64-gcc'
-)
-
-_dart_version=3.13.5
+depends=("${MINGW_PACKAGE_PREFIX}-gcc-libs")
+makedepends=("${MINGW_PACKAGE_PREFIX}-gcc")
 
 _dart_archive="dartsdk-windows-x64-release.zip"
 
 source=(
     "${_dart_archive}::https://storage.googleapis.com/dart-archive/channels/stable/release/${_dart_version}/sdk/${_dart_archive}"
+    "launcher.c"
+    "LICENSE"
 )
-
 sha256sums=(
     'aed8e4a8932ce8fa18ea32f990e43b4a1c9390a4c73777ab6fdf77fc9f4524d1'
+    'SKIP'
+    'SKIP'
 )
-
-noextract=(
-    "${_dart_archive}"
-)
+noextract=("${_dart_archive}")
 
 build() {
     mkdir -p "${srcdir}/build-pkg"
@@ -51,7 +44,7 @@ build() {
     chmod -R u+w "${srcdir}/build-pkg/dart-sdk"
 
     echo "==> Building native launcher..."
-    gcc -O2 -s -municode -o "${srcdir}/dart.exe" "${startdir}/src/launcher.c"
+    gcc -O2 -s -municode -o "${srcdir}/dart.exe" "${srcdir}/launcher.c"
 
     [[ -f "${srcdir}/dart.exe" ]] || return 1
 }
@@ -64,16 +57,15 @@ package() {
     echo "==> Installing launcher..."
     install -Dm755 "${srcdir}/dart.exe" "${pkgdir}${MINGW_PREFIX}/bin/dart.exe"
 
-    # Licenses
-    install -d "${pkgdir}${MINGW_PREFIX}/share/licenses/${pkgname}"
-
     # Project license (MIT)
-    install -Dm644 "${startdir}/LICENSE" \
+    install -Dm644 "${srcdir}/LICENSE" \
         "${pkgdir}${MINGW_PREFIX}/share/licenses/${pkgname}/LICENSE-MIT"
 
     # SDK license (BSD)
     if [[ -f "${srcdir}/build-pkg/dart-sdk/LICENSE" ]]; then
         install -Dm644 "${srcdir}/build-pkg/dart-sdk/LICENSE" \
             "${pkgdir}${MINGW_PREFIX}/share/licenses/${pkgname}/DART-LICENSE"
+    else
+        echo "WARNING: Dart SDK LICENSE not found."
     fi
 }
