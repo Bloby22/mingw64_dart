@@ -4,12 +4,16 @@ on:
   pull_request:
     paths:
       - PKGBUILD
+      - launcher.c
+      - LICENSE
       - .gitattributes
       - .github/workflows/build.yml
   push:
     branches: [main]
     paths:
       - PKGBUILD
+      - launcher.c
+      - LICENSE
       - .gitattributes
       - .github/workflows/build.yml
   workflow_dispatch:
@@ -39,24 +43,27 @@ jobs:
             mingw-w64-x86_64-gcc
 
       - name: Normalize line endings
-        run: dos2unix PKGBUILD
+        run: dos2unix PKGBUILD launcher.c
 
       - name: Build package
         run: makepkg -sf --noconfirm
 
       - name: Install package
-        run: pacman -U --noconfirm mingw-w64-x86_64-dart-0*.pkg.tar.zst
+        run: pacman -U --noconfirm mingw-w64-x86_64-dart-[0-9]*.pkg.tar.zst
 
       - name: Smoke test
         run: |
           which dart
           dart --version
+          echo 'void main(List<String> a) { print("ok ${a.join(",")}"); }' > hello.dart
+          dart run hello.dart one two | grep -x 'ok one,two'
 
       - name: Prepare release files
         id: ver
         run: |
-          echo "pkgver=$(grep -m1 '^pkgver=' PKGBUILD | cut -d= -f2)" >> "$GITHUB_OUTPUT"
-          cp mingw-w64-x86_64-dart-0*.pkg.tar.zst mingw-w64-x86_64-dart-latest.pkg.tar.zst
+          echo "dart=$(grep -m1 '^_dart_version=' PKGBUILD | cut -d= -f2)" >> "$GITHUB_OUTPUT"
+          echo "rel=$(grep -m1 '^pkgrel=' PKGBUILD | cut -d= -f2)" >> "$GITHUB_OUTPUT"
+          cp mingw-w64-x86_64-dart-[0-9]*.pkg.tar.zst mingw-w64-x86_64-dart-latest.pkg.tar.zst
 
       - uses: actions/upload-artifact@v4
         with:
@@ -67,9 +74,9 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.ver.outputs.pkgver }}
-          name: ${{ steps.ver.outputs.pkgver }}
+          tag_name: ${{ steps.ver.outputs.dart }}-${{ steps.ver.outputs.rel }}
+          name: Dart ${{ steps.ver.outputs.dart }} (pkgrel ${{ steps.ver.outputs.rel }})
           generate_release_notes: true
           files: |
-            mingw-w64-x86_64-dart-0*.pkg.tar.zst
+            mingw-w64-x86_64-dart-[0-9]*.pkg.tar.zst
             mingw-w64-x86_64-dart-latest.pkg.tar.zst
