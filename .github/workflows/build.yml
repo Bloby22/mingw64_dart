@@ -42,6 +42,7 @@ jobs:
           update: true
           install: >-
             base-devel
+            git
             mingw-w64-x86_64-gcc
 
       - name: Normalize line endings
@@ -75,6 +76,7 @@ jobs:
       - name: Write release notes
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
+          git config --global --add safe.directory '*'
           dart="${{ steps.ver.outputs.dart }}"
           rel="${{ steps.ver.outputs.rel }}"
           pkg=$(ls mingw-w64-x86_64-dart-[0-9]*.pkg.tar.zst)
