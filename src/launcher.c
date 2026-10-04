@@ -1,8 +1,3 @@
-/* dart.exe launcher for MSYS2 MinGW64.
- *
- * Installed as <prefix>/bin/dart.exe; starts the real Dart SDK binary in
- * <prefix>/lib/dart-sdk/bin/dart.exe and forwards all arguments unchanged.
- */
 #include <windows.h>
 #include <stdio.h>
 #include <stdlib.h>
