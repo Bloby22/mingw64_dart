@@ -1,17 +1,4 @@
 #!/usr/bin/env perl
-# Check for a new stable Dart release and update PKGBUILD.
-#
-# Updates _dart_version and sha256sums, bumps pkgver (patch) and resets
-# pkgrel to 1. The hash comes from the official Google Storage metadata;
-# makepkg verifies it again when it downloads the archive.
-#
-# Usage:
-#   scripts/auto.pl                 # update PKGBUILD if a newer stable version exists
-#   scripts/auto.pl --check         # only report; exit 10 if an update is available
-#   scripts/auto.pl --dart 3.13.5   # force a Dart version (hash still looked up)
-#   scripts/auto.pl --no-bump       # do not touch pkgver/pkgrel
-#
-# Requires: perl (core modules only) and curl.
 use strict;
 use warnings;
 
@@ -93,10 +80,15 @@ if (vcmp($new_dart, $cur_dart) < 0) {
     warn "WARNING: selected version is older than the one in PKGBUILD.\n";
 }
 
-# Current hash (also lets us notice a changed hash for the same version)
-($pb =~ /sha256sums=\(\s*\n\s*'([0-9a-f]{64})'\s*\n?\s*\)/)
-    or die "Could not parse the one-entry sha256sums array in PKGBUILD\n";
-my $cur_dart_sha = $1;
+# Current hash (also lets us notice a changed hash for the same version).
+# Tolerant of any formatting: one line or many, ' or " quotes, comments, CRLF.
+($pb =~ /^sha256sums=\(([^)]*)\)/m)
+    or die "sha256sums=(...) array not found in PKGBUILD\n";
+my $sums_body = $1;
+my @cur_hashes = $sums_body =~ /\b([0-9a-fA-F]{64})\b/g;
+die "Expected exactly one sha256 in PKGBUILD sha256sums, found " . scalar(@cur_hashes) . "\n"
+    if @cur_hashes != 1;
+my $cur_dart_sha = lc $cur_hashes[0];
 my $hash_changed = $cur_dart_sha ne $dart_sha;
 
 if (!$dart_changed && !$hash_changed) {
@@ -110,7 +102,7 @@ if ($check) {
 }
 
 $pb =~ s/^(_dart_version=).*$/$1$new_dart/m;
-$pb =~ s/(sha256sums=\(\s*\n\s*')[0-9a-f]{64}(')/$1$dart_sha$2/
+$pb =~ s/^(sha256sums=\([^)]*?)\b[0-9a-fA-F]{64}\b/$1$dart_sha/m
     or die "Failed to rewrite sha256sums\n";
 
 if (!$no_bump && $dart_changed) {
