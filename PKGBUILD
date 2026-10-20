@@ -1,13 +1,9 @@
-
 # Maintainer: BlobyCZ
-
 _dart_version=3.13.5
 _realname=dart
-
 pkgname="${MINGW_PACKAGE_PREFIX}-${_realname}"
 pkgver=3.13.5
 pkgrel=1
-
 pkgdesc='Dart SDK for MinGW64 (native dart.exe launcher)'
 arch=('any')
 mingw_arch=('mingw64')
