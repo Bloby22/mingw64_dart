@@ -1,8 +1,11 @@
+
 # Maintainer: BlobyCZ
+
 _dart_version=3.13.5
 _realname=dart
+
 pkgname="${MINGW_PACKAGE_PREFIX}-${_realname}"
-pkgver=${_dart_version//-/_}
+pkgver=3.13.5
 pkgrel=1
 
 pkgdesc='Dart SDK for MinGW64 (native dart.exe launcher)'
@@ -22,11 +25,13 @@ source=(
     "launcher.c"
     "LICENSE"
 )
+
 sha256sums=(
     'aed8e4a8932ce8fa18ea32f990e43b4a1c9390a4c73777ab6fdf77fc9f4524d1'
     'SKIP'
     'SKIP'
 )
+
 noextract=("${_dart_archive}")
 
 build() {
@@ -44,7 +49,9 @@ build() {
     chmod -R u+w "${srcdir}/build-pkg/dart-sdk"
 
     echo "==> Building native launcher..."
-    gcc -O2 -s -municode -o "${srcdir}/dart.exe" "${srcdir}/launcher.c"
+    gcc -O2 -s -municode \
+        -o "${srcdir}/dart.exe" \
+        "${srcdir}/launcher.c"
 
     [[ -f "${srcdir}/dart.exe" ]] || return 1
 }
@@ -52,10 +59,12 @@ build() {
 package() {
     echo "==> Installing Dart SDK..."
     install -d "${pkgdir}${MINGW_PREFIX}/lib"
-    cp -a "${srcdir}/build-pkg/dart-sdk" "${pkgdir}${MINGW_PREFIX}/lib/dart-sdk"
+    cp -a "${srcdir}/build-pkg/dart-sdk" \
+        "${pkgdir}${MINGW_PREFIX}/lib/dart-sdk"
 
     echo "==> Installing launcher..."
-    install -Dm755 "${srcdir}/dart.exe" "${pkgdir}${MINGW_PREFIX}/bin/dart.exe"
+    install -Dm755 "${srcdir}/dart.exe" \
+        "${pkgdir}${MINGW_PREFIX}/bin/dart.exe"
 
     # Project license (MIT)
     install -Dm644 "${srcdir}/LICENSE" \
