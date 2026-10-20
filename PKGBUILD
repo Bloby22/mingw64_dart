@@ -1,9 +1,13 @@
+
 # Maintainer: BlobyCZ
+
 _dart_version=3.13.5
 _realname=dart
+
 pkgname="${MINGW_PACKAGE_PREFIX}-${_realname}"
 pkgver=3.13.5
 pkgrel=1
+
 pkgdesc='Dart SDK for MinGW64 (native dart.exe launcher)'
 arch=('any')
 mingw_arch=('mingw64')
@@ -31,45 +35,66 @@ sha256sums=(
 noextract=("${_dart_archive}")
 
 build() {
+    local sdk_dir="${srcdir}/build-pkg/dart-sdk"
+
+    echo "==> Preparing build directory..."
     mkdir -p "${srcdir}/build-pkg"
 
     echo "==> Extracting Dart SDK..."
-    rm -rf "${srcdir}/build-pkg/dart-sdk"
-    bsdtar -xf "${srcdir}/${_dart_archive}" -C "${srcdir}/build-pkg"
+    rm -rf "${sdk_dir}"
+    bsdtar -xf "${srcdir}/${_dart_archive}" \
+        -C "${srcdir}/build-pkg"
 
-    if [[ ! -d "${srcdir}/build-pkg/dart-sdk" ]]; then
+    if [[ ! -d "${sdk_dir}" ]]; then
         echo "ERROR: Dart SDK extraction failed."
         return 1
     fi
 
-    chmod -R u+w "${srcdir}/build-pkg/dart-sdk"
+    chmod -R u+w "${sdk_dir}"
 
     echo "==> Building native launcher..."
     gcc -O2 -s -municode \
         -o "${srcdir}/dart.exe" \
         "${srcdir}/launcher.c"
 
-    [[ -f "${srcdir}/dart.exe" ]] || return 1
+    if [[ ! -f "${srcdir}/dart.exe" ]]; then
+        echo "ERROR: Launcher compilation failed."
+        return 1
+    fi
 }
 
 package() {
+    local sdk_dir="${srcdir}/build-pkg/dart-sdk"
+    local install_dir="${pkgdir}${MINGW_PREFIX}"
+    local license_dir="${install_dir}/share/licenses/${pkgname}"
+
+    echo "==> Checking build outputs..."
+    [[ -d "${sdk_dir}" ]] || {
+        echo "ERROR: Dart SDK directory not found."
+        return 1
+    }
+
+    [[ -f "${srcdir}/dart.exe" ]] || {
+        echo "ERROR: dart.exe launcher not found."
+        return 1
+    }
+
     echo "==> Installing Dart SDK..."
-    install -d "${pkgdir}${MINGW_PREFIX}/lib"
-    cp -a "${srcdir}/build-pkg/dart-sdk" \
-        "${pkgdir}${MINGW_PREFIX}/lib/dart-sdk"
+    install -d "${install_dir}/lib"
+    cp -a "${sdk_dir}" "${install_dir}/lib/dart-sdk"
 
     echo "==> Installing launcher..."
     install -Dm755 "${srcdir}/dart.exe" \
-        "${pkgdir}${MINGW_PREFIX}/bin/dart.exe"
+        "${install_dir}/bin/dart.exe"
 
-    # Project license (MIT)
+    echo "==> Installing project license..."
     install -Dm644 "${srcdir}/LICENSE" \
-        "${pkgdir}${MINGW_PREFIX}/share/licenses/${pkgname}/LICENSE-MIT"
+        "${license_dir}/LICENSE-MIT"
 
-    # SDK license (BSD)
-    if [[ -f "${srcdir}/build-pkg/dart-sdk/LICENSE" ]]; then
-        install -Dm644 "${srcdir}/build-pkg/dart-sdk/LICENSE" \
-            "${pkgdir}${MINGW_PREFIX}/share/licenses/${pkgname}/DART-LICENSE"
+    echo "==> Installing Dart SDK license..."
+    if [[ -f "${sdk_dir}/LICENSE" ]]; then
+        install -Dm644 "${sdk_dir}/LICENSE" \
+            "${license_dir}/DART-LICENSE"
     else
         echo "WARNING: Dart SDK LICENSE not found."
     fi
