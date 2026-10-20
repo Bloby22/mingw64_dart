@@ -1,9 +1,6 @@
-
 # Maintainer: BlobyCZ
-
 _dart_version=3.13.5
 _realname=dart
-
 pkgname="${MINGW_PACKAGE_PREFIX}-${_realname}"
 pkgver=3.13.5
 pkgrel=1
