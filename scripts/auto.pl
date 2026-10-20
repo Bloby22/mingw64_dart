@@ -106,13 +106,14 @@ $pb =~ s/^(sha256sums=\([^)]*?)\b[0-9a-fA-F]{64}\b/$1$dart_sha/m
     or die "Failed to rewrite sha256sums\n";
 
 
+
 if (!$no_bump && $dart_changed) {
     my $pkgver;
 
     if ($pb =~ /^pkgver=(\d+(?:\.\d+)*)\s*$/m) {
         $pkgver = $1;
-    } elsif ($pb =~ /^pkgver=\$\{_dart_version(?:::?[-\/].*)?\}\s*$/m) {
-        $pkgver = $new_dart;
+    } elsif ($pb =~ /^pkgver=\$\{_dart_version\/\/-\//_\}\s*$/m) {
+        $pkgver = $cur_dart;
     } else {
         die "pkgver not found or unsupported format in PKGBUILD\n";
     }
@@ -127,7 +128,6 @@ if (!$no_bump && $dart_changed) {
 
     print "pkgver -> $new_ver (pkgrel reset to 1)\n";
 }
-
 
 write_file($pkgbuild, $pb);
 print "PKGBUILD updated.\n";
