@@ -1,3 +1,4 @@
+
 name: Update Dart
 
 on:
@@ -12,21 +13,63 @@ permissions:
 jobs:
   update:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Perl
+        run: perl -v
+
+      - name: Debug updater and PKGBUILD
+        run: |
+          echo "==> Latest commit"
+          git log -1 --oneline
+
+          echo "==> Current version definitions"
+          grep -n -E '^(_dart_version|pkgver|pkgrel)=' PKGBUILD
+
+          echo "==> Check updater syntax"
+          perl -c scripts/auto.pl
 
       - name: Run auto.pl
         run: perl scripts/auto.pl
 
       - name: Read new version
         id: ver
+        shell: bash
         run: |
-          echo "dart=$(grep -m1 '^_dart_version=' PKGBUILD | cut -d= -f2)" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+
+          dart_version="$(sed -n 's/^_dart_version=\([0-9.]*\)[[:space:]]*$/\1/p' PKGBUILD | head -n 1)"
+
+          if [[ -z "$dart_version" ]]; then
+            echo "::error::Could not read _dart_version from PKGBUILD"
+            exit 1
+          fi
+
+          echo "dart=$dart_version" >> "$GITHUB_OUTPUT"
+          echo "Dart version: $dart_version"
+
+      - name: Check for changes
+        id: changes
+        shell: bash
+        run: |
+          if git diff --quiet -- PKGBUILD; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "PKGBUILD is already up to date."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "PKGBUILD has been updated."
+            git diff -- PKGBUILD
+          fi
 
       - name: Open pull request
+        if: steps.changes.outputs.changed == 'true'
         uses: peter-evans/create-pull-request@v7
         with:
-          # PAT, aby PR spustil build.yml (GITHUB_TOKEN workflow nespustí)
           token: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
           commit-message: "Update to Dart ${{ steps.ver.outputs.dart }}"
           branch: auto/update-sdks
@@ -37,5 +80,6 @@ jobs:
 
             - Dart: `${{ steps.ver.outputs.dart }}`
 
-            Checksum comes from the official Google Storage metadata.
-          add-paths: PKGBUILD
+            The SDK checksum is retrieved from the official Dart archive.
+          add-paths: |
+            PKGBUILD
