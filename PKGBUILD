@@ -1,8 +1,8 @@
 # Maintainer: BlobyCZ
-_dart_version=3.13.5
+_dart_version=3.13.6
 _realname=dart
 pkgname="${MINGW_PACKAGE_PREFIX}-${_realname}"
-pkgver=3.13.5
+pkgver=3.13.6
 pkgrel=1
 
 pkgdesc='Dart SDK for MinGW64 (native dart.exe launcher)'
@@ -24,7 +24,7 @@ source=(
 )
 
 sha256sums=(
-    'aed8e4a8932ce8fa18ea32f990e43b4a1c9390a4c73777ab6fdf77fc9f4524d1'
+    '95e16f71ebb80f41ba9dfcdc0c603bd3d4e2ce6aab586f4c14b229fb49597672'
     'SKIP'
     'SKIP'
 )
