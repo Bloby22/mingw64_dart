@@ -24,25 +24,31 @@ permissions:
 jobs:
   build:
     runs-on: windows-latest
+
     defaults:
       run:
         shell: msys2 {0}
+
     steps:
       - name: Disable autocrlf
         shell: pwsh
         run: git config --global core.autocrlf false
 
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - uses: msys2/setup-msys2@v2
+      - name: Setup MSYS2
+        uses: msys2/setup-msys2@v2
         with:
           msystem: MINGW64
           update: true
           install: >-
             base-devel
             git
+            dos2unix
+            curl
             mingw-w64-x86_64-gcc
 
       - name: Normalize line endings
@@ -66,25 +72,34 @@ jobs:
         run: |
           echo "dart=$(grep -m1 '^_dart_version=' PKGBUILD | cut -d= -f2)" >> "$GITHUB_OUTPUT"
           echo "rel=$(grep -m1 '^pkgrel=' PKGBUILD | cut -d= -f2)" >> "$GITHUB_OUTPUT"
-          cp mingw-w64-x86_64-dart-[0-9]*.pkg.tar.zst mingw-w64-x86_64-dart-latest.pkg.tar.zst
 
-      - uses: actions/upload-artifact@v4
+          cp mingw-w64-x86_64-dart-[0-9]*.pkg.tar.zst \
+             mingw-w64-x86_64-dart-latest.pkg.tar.zst
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v4
         with:
           name: package
           path: mingw-w64-x86_64-dart-latest.pkg.tar.zst
+          if-no-files-found: error
 
       - name: Write release notes
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           git config --global --add safe.directory '*'
+
           dart="${{ steps.ver.outputs.dart }}"
           rel="${{ steps.ver.outputs.rel }}"
+
           pkg=$(ls mingw-w64-x86_64-dart-[0-9]*.pkg.tar.zst)
           pkg_sha=$(sha256sum "$pkg" | cut -d' ' -f1)
           sdk_sha=$(grep -m1 -oE "'[0-9a-f]{64}'" PKGBUILD | tr -d "'")
+
           date=$(curl -fsSL "https://storage.googleapis.com/dart-archive/channels/stable/release/$dart/VERSION" \
                  | sed -n 's/.*"date": *"\([^"]*\)".*/\1/p' || true)
+
           prev=$(git describe --tags --abbrev=0 2>/dev/null || true)
+
           if [ -n "$prev" ]; then
             changes=$(git log --pretty='- %s (%h)' "$prev"..HEAD)
           else
@@ -121,6 +136,7 @@ jobs:
           tag_name: ${{ steps.ver.outputs.dart }}-${{ steps.ver.outputs.rel }}
           name: Dart ${{ steps.ver.outputs.dart }}
           body_path: release-notes.md
+          fail_on_unmatched_files: true
           files: |
             mingw-w64-x86_64-dart-[0-9]*.pkg.tar.zst
             mingw-w64-x86_64-dart-latest.pkg.tar.zst
